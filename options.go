@@ -211,6 +211,12 @@ func (t *Options) DeserializeOutputs() {
 	}
 }
 
+func (t *Options) Release() {
+	for _, o := range t.Options {
+		C.g_value_unset(&o.GValue)
+	}
+}
+
 func (t *Options) AddInput(name string, i interface{}, optionType OptionType, gType C.GType) *Option {
 	o := newInput(name, i, optionType, gType)
 	t.Options = append(t.Options, o)

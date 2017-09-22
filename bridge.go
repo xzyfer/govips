@@ -74,6 +74,7 @@ func vipsCall(name string, options *Options) error {
 
 func vipsCallOperation(operation *C.VipsOperation, options *Options) error {
 	defer C.g_object_unref(C.gpointer(unsafe.Pointer(operation)))
+	defer options.Release()
 
 	// TODO(d): Unref the outputs
 
