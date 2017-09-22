@@ -285,8 +285,6 @@ var (
 
 // DetermineImageType attempts to determine the image type of the given buffer
 func DetermineImageType(buf []byte) ImageType {
-	startupIfNeeded()
-
 	size := len(buf)
 	if size == 0 {
 		return ImageTypeUnknown
@@ -300,13 +298,12 @@ func DetermineImageType(buf []byte) ImageType {
 		return ImageTypeUnknown
 	}
 
-	imageType := ImageTypeUnknown
 	name := strings.ToLower(C.GoString(cName))
 	if imageType, ok := typeLoaders[name]; ok {
 		return imageType
 	}
 
-	return imageType
+	return ImageTypeUnknown
 }
 
 // InitTypes initializes caches and figures out which image types are supported

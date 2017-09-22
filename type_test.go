@@ -9,6 +9,9 @@ import (
 )
 
 func TestJpeg(t *testing.T) {
+	if testing.Short() {
+		return
+	}
 	buf, _ := ioutil.ReadFile("fixtures/canyon.jpg")
 	assert.NotNil(t, buf)
 

@@ -21,8 +21,6 @@ type Image struct {
 // NewImageFromMemory wraps an image around a memory area. The memory area must be a simple
 // array (e.g., RGBRGBRGB), left-to-right, top-to-bottom.
 func NewImageFromMemory(bytes []byte, width, height, bands int, format BandFormat) (*Image, error) {
-	startupIfNeeded()
-
 	vipsImage := C.vips_image_new_from_memory_copy(
 		byteArrayPointer(bytes),
 		C.size_t(len(bytes)),
@@ -35,10 +33,7 @@ func NewImageFromMemory(bytes []byte, width, height, bands int, format BandForma
 }
 
 // NewImageFromFile loads an image buffer from disk and creates a new Image
-func NewImageFromFile(path string, opts ...OptionFunc) (*Image, error) {
-	startupIfNeeded()
-	fileName, optionString := vipsFilenameSplit8(path)
-
+func NewImageFromFile(fileName string, opts ...OptionFunc) (*Image, error) {
 	operationName, err := vipsForeignFindLoad(fileName)
 	if err != nil {
 		return nil, ErrUnsupportedImageFormat
@@ -50,7 +45,7 @@ func NewImageFromFile(path string, opts ...OptionFunc) (*Image, error) {
 		ImageOutput("out", &out),
 	)
 
-	if err := vipsCallString(operationName, options, optionString); err != nil {
+	if err := vipsCall(operationName, options); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -94,7 +89,12 @@ func newImage(vipsImage *C.VipsImage) *Image {
 }
 
 func finalizeImage(i *Image) {
+	fmt.Println("Shutting down image")
 	C.g_object_unref(C.gpointer(i.image))
+}
+
+func (i *Image) Finalize() {
+	finalizeImage(i)
 }
 
 // Width returns the width of this image
@@ -162,10 +162,8 @@ func (i *Image) ToBytes() ([]byte, error) {
 
 // WriteToBuffer writes the image to a buffer in a format represented by the given suffix (e.g., .jpeg)
 func (i *Image) WriteToBuffer(imageType ImageType, opts ...OptionFunc) ([]byte, error) {
-	startupIfNeeded()
 	suffix := imageTypeExtensionMap[imageType]
-	fileName, optionString := vipsFilenameSplit8(suffix)
-	operationName, err := vipsForeignFindSaveBuffer(fileName)
+	operationName, err := vipsForeignFindSaveBuffer(suffix)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +172,7 @@ func (i *Image) WriteToBuffer(imageType ImageType, opts ...OptionFunc) ([]byte, 
 		ImageInput("in", i),
 		BlobOutput("buffer", &blob),
 	)
-	err = vipsCallString(operationName, options, optionString)
+	err = vipsCall(operationName, options)
 	if err != nil {
 		return nil, err
 	}
@@ -185,9 +183,7 @@ func (i *Image) WriteToBuffer(imageType ImageType, opts ...OptionFunc) ([]byte, 
 }
 
 // WriteToFile writes the image to a file on disk based on the format specified in the path
-func (i *Image) WriteToFile(path string, opts ...OptionFunc) error {
-	startupIfNeeded()
-	fileName, optionString := vipsFilenameSplit8(path)
+func (i *Image) WriteToFile(fileName string, opts ...OptionFunc) error {
 	operationName, err := vipsForeignFindSave(fileName)
 	if err != nil {
 		return err
@@ -196,7 +192,7 @@ func (i *Image) WriteToFile(path string, opts ...OptionFunc) error {
 		ImageInput("in", i),
 		StringInput("filename", fileName),
 	)
-	return vipsCallString(operationName, options, optionString)
+	return vipsCall(operationName, options)
 }
 
 type CallEvent struct {
