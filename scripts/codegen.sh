@@ -1,4 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env sh
+set -euox pipefail
+
 if [ -f pkg/vips/operators.go ]; then
   rm pkg/vips/operators.go
 fi

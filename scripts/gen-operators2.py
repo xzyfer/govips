@@ -149,6 +149,23 @@ def gen_params(op, required):
 
 
 func_template = Template('''
+type ${func_name}Params struct {
+  $input_props
+  $output_props
+}
+
+// $func_name executes the '$op_name' operation
+func ${func_name}2($args) error {
+  $decls
+  options = append(options,
+    $input_options
+    $output_options
+  )
+  incOpCounter("$op_name")
+  return vipsCall("$op_name", options)
+}
+
+
 // $func_name executes the '$op_name' operation
 func $func_name($args) ($return_types) {
   $decls
@@ -161,6 +178,19 @@ func $func_name($args) ($return_types) {
   return $return_values
 }
 ''')
+
+stream_template = Template('''
+// $func_name executes the '$op_name' operation
+func (in *ImageRef) $func_name($method_args) error {
+  out, err := $func_name(in.image, $call_values)
+  if err != nil {
+    return err
+  }
+  in.SetImage(out)
+  return nil
+}
+''')
+
 
 def emit_func(d):
   return func_template.substitute(d)
@@ -186,10 +216,13 @@ def gen_operation(cls):
   output_options = []
   method_args = []
   call_values = []
+  input_props = []
+  output_props = []
   images_in = 0
   images_out = 0
 
   all_props = find_required(op)
+#  print '//', op, all_props
   for prop in all_props:
     name = lower_camelcase(prop.name)
     prop_type = get_type(prop)
@@ -205,6 +238,7 @@ def gen_operation(cls):
       decls.append('var %s %s' % (name, prop_type))
       return_values.append(name)
       output_options.append('Output%s("%s", &%s),' % (method_name, prop.name, name))
+      output_props.append('%s *%s' % (upper_camelcase(prop.name), prop_type))
     else:
       if GObject.type_is_a(vips_type_image, prop.value_type):
         images_in += 1
@@ -216,6 +250,7 @@ def gen_operation(cls):
       if GObject.type_is_a(param_enum, prop):
         arg_name = 'int(%s)' % arg_name
       input_options.append('Input%s("%s", %s),' % (method_name, prop.name, arg_name))
+      input_props.append('%s %s' % (upper_camelcase(prop.name), prop_type))
 
   args.append('options ...*Option')
   decls.append('var err error')
@@ -233,6 +268,8 @@ def gen_operation(cls):
     'decls': '\n\t'.join(decls),
     'input_options': '\n\t\t'.join(input_options),
     'output_options': '\n\t\t'.join(output_options),
+    'input_props': '\n'.join(input_props),
+    'output_props': '\n'.join(output_props),
     'return_types': ', '.join(return_types),
     'return_values': ', '.join(return_values),
   }
