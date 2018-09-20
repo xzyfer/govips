@@ -50,6 +50,31 @@ import "C"
 // Unsupported: webpload_buffer: 'VipsBlob'
 // Unsupported: webpsave_buffer: 'VipsBlob'
 
+// Linear1 executes the 'Linear1' operation
+func Linear1(in *C.VipsImage, a, b float64, options ...*Option) (*C.VipsImage, error) {
+	var out *C.VipsImage
+	var err error
+	options = append(options,
+		InputImage("in", in),
+		OutputImage("out", &out),
+		InputDouble("a", a),
+		InputDouble("b", b),
+	)
+	incOpCounter("linear1")
+	err = vipsCall("linear1", options)
+	return out, err
+}
+
+// Linear1 executes the 'linear1' operation
+func (in *ImageRef) Linear1(a, b float64, options ...*Option) error {
+	out, err := Linear1(in.image, a, b, options...)
+	if err != nil {
+		return err
+	}
+	in.SetImage(out)
+	return nil
+}
+
 // Abs executes the 'abs' operation
 func Abs(in *C.VipsImage, options ...*Option) (*C.VipsImage, error) {
 	var out *C.VipsImage
